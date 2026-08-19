@@ -210,6 +210,9 @@ type AppState = {
   wallets: Wallet[];
   walletActivity: WalletActivity[];
   addWallet: (input: { name: string; type: WalletType; provider?: string; balance: number }) => void;
+  renameWallet: (id: string, name: string) => boolean;
+  deleteWallet: (id: string) => boolean;
+  walletUsage: (id: string) => number;
   topUpWallet: (input: { walletId: string; amount: number; source?: string }) => boolean;
   transferBetweenWallets: (input: { fromId: string; toId: string; amount: number }) => boolean;
   balance: number;
