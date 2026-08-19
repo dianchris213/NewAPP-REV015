@@ -7,9 +7,11 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 import {
   useApp,
   WALLET_TYPE_LABEL,
+  formatIDR,
   type Language,
   type Settings as SettingsState,
   type TxType,
+  type WalletType,
 } from "@/lib/app-store";
 import { t } from "@/lib/i18n";
 
@@ -135,10 +137,11 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function SettingsPage() {
-  const { user, logout, settings, language, categories } = useApp();
+  const { user, logout, settings, language, categories, wallets } = useApp();
   const navigate = useNavigate();
   const copy = t(language);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [fundOpen, setFundOpen] = useState(false);
 
   return (
     <AppShell topBar={<TopBar eyebrow={copy.settingsEyebrow} title={copy.settingsTitle} />}>
@@ -211,6 +214,13 @@ function SettingsPage() {
           onClick={() => setCategoryOpen(true)}
         />
         <Row
+          icon="account_balance_wallet"
+          title={copy.fundSources}
+          subtitle={wallets.length ? `${wallets.length} · ${copy.manage}` : copy.fundSourcesEmpty}
+          trailing={Chevron}
+          onClick={() => setFundOpen(true)}
+        />
+        <Row
           icon="download"
           title={copy.exportData}
           subtitle={copy.exportHint}
@@ -232,7 +242,282 @@ function SettingsPage() {
       </button>
 
       {categoryOpen ? <CategorySheet onClose={() => setCategoryOpen(false)} /> : null}
+      {fundOpen ? <FundSourceSheet onClose={() => setFundOpen(false)} /> : null}
     </AppShell>
+  );
+}
+
+const WALLET_TYPES: WalletType[] = ["cash", "bank", "ewallet"];
+
+/** Manage user-owned fund sources (Sumber Dana). Empty by default. */
+function FundSourceSheet({ onClose }: { onClose: () => void }) {
+  const { language, wallets, addWallet, renameWallet, deleteWallet, walletUsage } = useApp();
+  const copy = t(language);
+  const ref = useModalA11y<HTMLDivElement>(true, onClose);
+  const [name, setName] = useState("");
+  const [type, setType] = useState<WalletType>("cash");
+  const [balance, setBalance] = useState("");
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  const [status, setStatus] = useState("");
+
+  const list = useMemo(
+    () => [...wallets].sort((a, b) => a.name.localeCompare(b.name)),
+    [wallets],
+  );
+
+  const announce = (message: string, ok: boolean) => {
+    setStatus(message);
+    if (ok) toast.success(message);
+    else toast.error(message);
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numeric = Number(balance.replace(/\D/g, "")) || 0;
+    const ok = addWallet({ name, type, balance: numeric });
+    if (!ok) {
+      setError(copy.invalidFundSource);
+      announce(copy.invalidFundSource, false);
+      return;
+    }
+    setName("");
+    setBalance("");
+    setError(undefined);
+    announce(copy.fundSourceAdded, true);
+  };
+
+  const commitRename = (id: string) => {
+    if (!renameWallet(id, editingName)) {
+      setRowError({ id, message: copy.invalidFundSource });
+      announce(copy.invalidFundSource, false);
+      return;
+    }
+    setEditingId(null);
+    setEditingName("");
+    setRowError(null);
+    announce(copy.fundSourceRenamed, true);
+  };
+
+  const remove = (id: string) => {
+    if (walletUsage(id) > 0 || !deleteWallet(id)) {
+      setRowError({ id, message: copy.fundSourceInUse });
+      announce(copy.fundSourceInUse, false);
+      return;
+    }
+    setRowError(null);
+    announce(copy.fundSourceDeleted, true);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[180] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.fundSources}
+        data-testid="fund-source-sheet"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-[26px] border-t border-outline-variant/20 bg-surface-container-high p-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] shadow-2xl"
+      >
+        <span
+          aria-hidden="true"
+          className="mx-auto mb-3 block h-1 w-10 rounded-full bg-outline-variant/60"
+        />
+        <div className="flex items-center justify-between">
+          <h3 className="m-0 text-title text-on-surface">{copy.fundSources}</h3>
+          <button
+            type="button"
+            aria-label={copy.close}
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-variant text-on-surface-variant focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            <Icon name="close" className="text-[18px]" />
+          </button>
+        </div>
+
+        <form className="mt-4 flex flex-col gap-3" onSubmit={submit} noValidate>
+          <label className="flex flex-col gap-1">
+            <span className="text-meta text-on-surface-variant/80">{copy.fundSourceName}</span>
+            <input
+              value={name}
+              maxLength={24}
+              data-testid="fund-source-name"
+              aria-invalid={!!error}
+              onChange={(e) => setName(e.target.value)}
+              className="h-12 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 text-[14px] text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-meta text-on-surface-variant/80">{copy.fundSourceType}</span>
+            <select
+              value={type}
+              data-testid="fund-source-type"
+              onChange={(e) => setType(e.target.value as WalletType)}
+              className="h-12 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 text-[14px] text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            >
+              {WALLET_TYPES.map((wt) => (
+                <option key={wt} value={wt}>
+                  {WALLET_TYPE_LABEL[wt]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-meta text-on-surface-variant/80">{copy.fundSourceBalance}</span>
+            <input
+              inputMode="numeric"
+              data-testid="fund-source-balance"
+              value={(Number(balance.replace(/\D/g, "")) || 0).toLocaleString("id-ID")}
+              onChange={(e) => setBalance(e.target.value.replace(/\D/g, "").slice(0, 15))}
+              className="h-12 rounded-2xl border border-outline-variant/30 bg-surface-container px-4 text-[14px] text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            />
+          </label>
+          {error ? (
+            <p role="alert" className="m-0 text-[11px] font-semibold text-error">
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            data-testid="fund-source-submit"
+            className="gradient-primary h-12 rounded-full text-[13px] font-bold text-on-primary-container transition-transform active:scale-95"
+          >
+            {copy.addFundSource}
+          </button>
+        </form>
+
+        <p aria-live="polite" className="sr-only">
+          {status}
+        </p>
+
+        <ul className="mt-4 list-none rounded-2xl bg-surface-container px-4 py-1">
+          {list.length ? (
+            list.map((w) => {
+              const used = walletUsage(w.id);
+              const editing = editingId === w.id;
+              const message = rowError && rowError.id === w.id ? rowError.message : null;
+              return (
+                <li
+                  key={w.id}
+                  data-testid={`fund-source-item-${w.id}`}
+                  className="flex flex-col gap-2 border-b border-outline-variant/20 py-3 last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    {editing ? (
+                      <input
+                        autoFocus
+                        value={editingName}
+                        maxLength={24}
+                        aria-label={`${copy.renameFundSource} ${w.name}`}
+                        aria-invalid={!!message}
+                        data-testid={`fund-source-rename-input-${w.id}`}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitRename(w.id);
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            setEditingId(null);
+                            setRowError(null);
+                          }
+                        }}
+                        className="h-10 min-w-0 flex-1 rounded-2xl border border-outline-variant/30 bg-surface-container-high px-3 text-[14px] text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      />
+                    ) : (
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium text-on-surface">
+                          {w.name}
+                        </span>
+                        <span className="truncate text-[11px] text-on-surface-variant/80">
+                          {`${WALLET_TYPE_LABEL[w.type]} · ${formatIDR(w.balance)} · ${used}`}
+                        </span>
+                      </span>
+                    )}
+
+                    {editing ? (
+                      <>
+                        <button
+                          type="button"
+                          aria-label={copy.save}
+                          data-testid={`fund-source-rename-save-${w.id}`}
+                          onClick={() => commitRename(w.id)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-container/40 text-primary focus-visible:ring-2 focus-visible:ring-primary/60"
+                        >
+                          <Icon name="check" className="text-[18px]" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={copy.cancel}
+                          onClick={() => {
+                            setEditingId(null);
+                            setRowError(null);
+                          }}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-variant text-on-surface-variant focus-visible:ring-2 focus-visible:ring-primary/60"
+                        >
+                          <Icon name="close" className="text-[18px]" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          aria-label={`${copy.rename} ${w.name}`}
+                          data-testid={`fund-source-rename-${w.id}`}
+                          onClick={() => {
+                            setEditingId(w.id);
+                            setEditingName(w.name);
+                            setRowError(null);
+                          }}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-variant text-on-surface-variant focus-visible:ring-2 focus-visible:ring-primary/60"
+                        >
+                          <Icon name="edit" className="text-[18px]" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${copy.delete} ${w.name}`}
+                          data-testid={`fund-source-delete-${w.id}`}
+                          aria-disabled={used > 0}
+                          onClick={() => remove(w.id)}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full bg-surface-variant focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                            used > 0 ? "text-on-surface-variant/40" : "text-error"
+                          }`}
+                        >
+                          <Icon name="delete" className="text-[18px]" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {message ? (
+                    <p
+                      role="alert"
+                      data-testid={`fund-source-error-${w.id}`}
+                      className="m-0 text-[11px] font-semibold text-error"
+                    >
+                      {message}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })
+          ) : (
+            <li
+              data-testid="fund-source-empty"
+              className="py-4 text-center text-[12px] text-on-surface-variant/70"
+            >
+              {copy.fundSourcesEmpty}
+            </li>
+          )}
+        </ul>
+      </div>
+    </div>
   );
 }
 
