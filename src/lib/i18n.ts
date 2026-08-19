@@ -64,6 +64,18 @@ type Dict = {
   sortNameDesc: string;
   sortMostUsed: string;
   noCategoryResults: string;
+  fundSources: string;
+  fundSourcesEmpty: string;
+  addFundSource: string;
+  fundSourceName: string;
+  fundSourceType: string;
+  fundSourceBalance: string;
+  invalidFundSource: string;
+  fundSourceInUse: string;
+  fundSourceAdded: string;
+  fundSourceRenamed: string;
+  fundSourceDeleted: string;
+  renameFundSource: string;
 };
 
 const dictionaries: Record<Language, Dict> = {
@@ -131,6 +143,18 @@ const dictionaries: Record<Language, Dict> = {
     sortNameDesc: "Nama (Z-A)",
     sortMostUsed: "Paling sering dipakai",
     noCategoryResults: "Tidak ada kategori yang cocok.",
+    fundSources: "Sumber Dana",
+    fundSourcesEmpty: "Belum ada sumber dana. Tambahkan milik Anda sendiri.",
+    addFundSource: "Tambah Sumber Dana",
+    fundSourceName: "Nama Sumber Dana",
+    fundSourceType: "Jenis",
+    fundSourceBalance: "Saldo Awal",
+    invalidFundSource: "Nama sumber dana 2-24 karakter dan tidak boleh duplikat.",
+    fundSourceInUse: "Sumber dana masih dipakai dan tidak bisa dihapus.",
+    fundSourceAdded: "Sumber dana ditambahkan",
+    fundSourceRenamed: "Nama sumber dana diperbarui",
+    fundSourceDeleted: "Sumber dana dihapus",
+    renameFundSource: "Ubah Nama Sumber Dana",
   },
   en: {
     settingsEyebrow: "Configuration",
@@ -196,6 +220,18 @@ const dictionaries: Record<Language, Dict> = {
     sortNameDesc: "Name (Z-A)",
     sortMostUsed: "Most used",
     noCategoryResults: "No categories match your search.",
+    fundSources: "Fund Sources",
+    fundSourcesEmpty: "No fund sources yet. Add your own to get started.",
+    addFundSource: "Add Fund Source",
+    fundSourceName: "Fund Source Name",
+    fundSourceType: "Type",
+    fundSourceBalance: "Starting Balance",
+    invalidFundSource: "Fund source name must be 2-24 characters and unique.",
+    fundSourceInUse: "This fund source is still in use and cannot be deleted.",
+    fundSourceAdded: "Fund source added",
+    fundSourceRenamed: "Fund source renamed",
+    fundSourceDeleted: "Fund source deleted",
+    renameFundSource: "Rename Fund Source",
   },
 };
 

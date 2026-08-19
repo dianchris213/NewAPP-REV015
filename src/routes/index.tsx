@@ -254,7 +254,8 @@ function Home() {
       >
         <div id="recent-transactions">
           {visible.length ? (
-            <TransactionList items={visible} actions />
+            /* Read-only on Home: edit/delete live only in the full modal views. */
+            <TransactionList items={visible} />
           ) : (
             <EmptyState
               icon="receipt"
