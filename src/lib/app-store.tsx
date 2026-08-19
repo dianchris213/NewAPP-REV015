@@ -209,7 +209,12 @@ type AppState = {
   lockApp: () => void;
   wallets: Wallet[];
   walletActivity: WalletActivity[];
-  addWallet: (input: { name: string; type: WalletType; provider?: string; balance: number }) => void;
+  addWallet: (input: {
+    name: string;
+    type: WalletType;
+    provider?: string;
+    balance: number;
+  }) => boolean;
   renameWallet: (id: string, name: string) => boolean;
   deleteWallet: (id: string) => boolean;
   walletUsage: (id: string) => number;
@@ -333,8 +338,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addWallet = useCallback(
     (input: { name: string; type: WalletType; provider?: string; balance: number }) => {
-      const name = input.name.trim();
-      if (!name) return;
+      const name = input.name.trim().replace(/\s+/g, " ");
+      if (name.length < 2 || name.length > 24) return false;
+      let ok = false;
       const id = `w${Date.now()}`;
       const wallet: Wallet = {
         id,
@@ -343,7 +349,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         balance: Math.max(0, Math.round(input.balance) || 0),
         ...(input.provider?.trim() ? { provider: input.provider.trim() } : {}),
       };
-      setWallets((prev) => [...prev, wallet]);
+      setWallets((prev) => {
+        if (prev.some((w) => w.name.toLowerCase() === name.toLowerCase())) return prev;
+        ok = true;
+        return [...prev, wallet];
+      });
+      if (!ok) return false;
       setWalletActivity((prev) => [
         {
           id: `wa${Date.now()}`,
@@ -355,8 +366,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
         ...prev,
       ]);
+      return true;
     },
     [],
+  );
+
+  /** How many records still reference this fund source (transactions + categories). */
+  const walletUsage = useCallback(
+    (id: string) =>
+      transactions.filter((tx) => tx.walletId === id).length +
+      categories.filter((c) => c.walletId === id).length,
+    [categories, transactions],
+  );
+
+  const renameWallet = useCallback((id: string, next: string) => {
+    const name = next.trim().replace(/\s+/g, " ");
+    if (!id || name.length < 2 || name.length > 24) return false;
+    let ok = false;
+    setWallets((prev) => {
+      const target = prev.find((w) => w.id === id);
+      if (!target) return prev;
+      const duplicate = prev.some(
+        (w) => w.id !== id && w.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (duplicate) return prev;
+      ok = true;
+      return prev.map((w) => (w.id === id ? { ...w, name } : w));
+    });
+    return ok;
+  }, []);
+
+  const deleteWallet = useCallback(
+    (id: string) => {
+      if (!id) return false;
+      if (walletUsage(id) > 0) return false;
+      let ok = false;
+      setWallets((prev) => {
+        if (!prev.some((w) => w.id === id)) return prev;
+        ok = true;
+        return prev.filter((w) => w.id !== id);
+      });
+      return ok;
+    },
+    [walletUsage],
   );
 
 
