@@ -89,10 +89,19 @@ export function TopBar({
     reader.readAsDataURL(file);
   }, []);
 
-  // Telegram values win when present, otherwise fall back to mock/store data.
+  // The store is the single source of truth once a profile exists: Telegram
+  // data is only a fallback while no user is loaded. This keeps the TopBar and
+  // every modal in sync instantly, with no duplicated avatar state.
   const displayName = user?.name ?? tg?.name ?? "Pengguna";
-  const displayAvatar = user?.avatar ?? tg?.avatar;
+  const displayAvatar = user ? user.avatar : tg?.avatar;
   const displayHandle = eyebrow ?? user?.handle ?? tg?.handle ?? "Catatan Keuangan";
+
+  // Keep the open editor's drafts aligned with the store (single source of
+  // truth) so an avatar change elsewhere is reflected without duplication.
+  useEffect(() => {
+    if (!editOpen) return;
+    setAvatarDraft(displayAvatar ?? "");
+  }, [editOpen, displayAvatar]);
 
   const openEdit = useCallback(() => {
     setNameDraft(displayName);
