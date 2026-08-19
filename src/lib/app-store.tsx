@@ -538,8 +538,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         setSettings({ ...defaultSettings, ...(parsed.settings ?? {}) });
         if (parsed.language === "id" || parsed.language === "en") setLanguage(parsed.language);
-        if (parsed.wallets?.length) setWallets(parsed.wallets);
-        if (parsed.walletActivity?.length) setWalletActivity(parsed.walletActivity);
+        if (Array.isArray(parsed.wallets)) setWallets(parsed.wallets);
+        if (Array.isArray(parsed.walletActivity)) setWalletActivity(parsed.walletActivity);
         if (Array.isArray(parsed.categories)) setCategories(parsed.categories);
         if (parsed.settings?.biometricLock) setLocked(true);
       } else {
