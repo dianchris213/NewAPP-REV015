@@ -478,13 +478,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const markNotificationsRead = useCallback(() => setUnreadCount(0), []);
 
+  /**
+   * Single source of truth for the profile. Only the keys present in `update`
+   * are touched, and `avatar: ""` is an explicit "remove photo" instruction —
+   * so a name-only edit can never wipe or duplicate the avatar.
+   */
   const updateProfile = useCallback((update: { name?: string; avatar?: string }) => {
     setUser((prev) => {
       if (!prev) return prev;
       const next: User = { ...prev };
-      if (update.name?.trim()) next.name = update.name.trim();
-      if (update.avatar?.trim()) next.avatar = update.avatar.trim();
-      else delete next.avatar;
+      if (typeof update.name === "string" && update.name.trim()) {
+        next.name = update.name.trim().slice(0, 40);
+      }
+      if (typeof update.avatar === "string") {
+        const avatar = update.avatar.trim();
+        if (avatar) next.avatar = avatar;
+        else delete next.avatar;
+      }
+      if (next.name === prev.name && next.avatar === prev.avatar) return prev;
       return next;
     });
   }, []);
@@ -702,6 +713,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       wallets,
       walletActivity,
       addWallet,
+      renameWallet,
+      deleteWallet,
+      walletUsage,
       topUpWallet,
       transferBetweenWallets,
       balance: totalIncome - totalExpense,
@@ -745,6 +759,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       wallets,
       walletActivity,
       addWallet,
+      renameWallet,
+      deleteWallet,
+      walletUsage,
       topUpWallet,
       transferBetweenWallets,
       walletBalance,
