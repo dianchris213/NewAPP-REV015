@@ -128,42 +128,13 @@ const defaultSettings: Settings = {
   cloudSync: false,
 };
 
-const seedWallets = (): Wallet[] => [
-  { id: "w1", name: "Tunai", type: "cash", provider: "Dompet Fisik", balance: 1250000 },
-  { id: "w2", name: "Bank Utama", type: "bank", provider: "BCA", balance: 6400000 },
-  { id: "w3", name: "E-Wallet", type: "ewallet", provider: "GoPay", balance: 850000 },
-];
+/**
+ * Fund sources (Sumber Dana) are user-owned: the app ships with NONE, so a
+ * fresh install starts from a clean, honest zero balance.
+ */
+const seedWallets = (): Wallet[] => [];
 
-const seedWalletActivity = (): WalletActivity[] => {
-  const now = Date.now();
-  const day = 86_400_000;
-  return [
-    {
-      id: "wa1",
-      kind: "topup",
-      title: "Isi Saldo E-Wallet",
-      detail: "GoPay · dari Bank Utama",
-      amount: 300000,
-      date: new Date(now - day).toISOString(),
-    },
-    {
-      id: "wa2",
-      kind: "transfer",
-      title: "Transfer Antar Kantong",
-      detail: "Bank Utama → Tunai",
-      amount: 500000,
-      date: new Date(now - 3 * day).toISOString(),
-    },
-    {
-      id: "wa3",
-      kind: "create",
-      title: "Kantong Dibuat",
-      detail: "E-Wallet · GoPay",
-      amount: 0,
-      date: new Date(now - 20 * day).toISOString(),
-    },
-  ];
-};
+const seedWalletActivity = (): WalletActivity[] => [];
 
 
 const seedTransactions = (): Transaction[] => {
